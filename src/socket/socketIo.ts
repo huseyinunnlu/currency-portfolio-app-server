@@ -30,6 +30,7 @@ function setSocketIdsToCurrencyKeys(currencyKeys: string[], socketId: string) {
 
 export default async function initSocketIo(io: Server) {
     io.on('connection', (socket) => {
+        console.log("socket connected", socket.id)
         appendConnectedClientToCache(io)
 
         socket.on('triggerCurrencyData', (data) => {
