@@ -45,10 +45,10 @@ const main = async () => {
     await initWebSocket(io)
 
     server.listen(3001, () => {
-        console.log('WebSocket server is running on http://localhost:3001')
+        console.log('WebSocket server is running')
     })
     app.listen(PORT, () => {
-        console.log(`Server is running on http://localhost:${PORT}`)
+        console.log(`Server is running`)
     })
 }
 
