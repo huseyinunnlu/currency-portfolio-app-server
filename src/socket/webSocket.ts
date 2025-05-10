@@ -41,8 +41,14 @@ function startCurrencyDataStream(webSocket: WebSocket) {
 }
 
 async function getServiceToken(retryCount: number = 0): Promise<string | null> {
+    console.log("process.env.SERVICE_URL", process.env.SERVICE_URL)    
     if (retryCount > 4) {
         console.error('Max retry attempts reached. Unable to fetch token.');
+        return null;
+    }
+
+    if (!process.env.SERVICE_URL) {
+        console.error('SERVICE_URL environment variable is not set');
         return null;
     }
 
@@ -61,61 +67,85 @@ async function getServiceToken(retryCount: number = 0): Promise<string | null> {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before retrying
         return getServiceToken(retryCount + 1);
     } catch (error) {
-        console.error('Error: Token not fetched');
+        console.error('Error fetching token:', error);
         await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before retrying
         return getServiceToken(retryCount + 1);
     }
 }
 
 export default async function initWebSocket(io: Server) {
-    let token: string | null = await getServiceToken()
-    if (!token) {
-        return;
-    }
-
-    const webSocket = new WebSocket(process.env.WEBSOCKET_SERVER_URL || "");
-
-    webSocket.onopen = () => {
-        console.log('WebSocket connection established');
-        login(webSocket, token)
-        hearthbeat(webSocket);
-    };
-
-    webSocket.onmessage = (event) => {
-        const parsedData = JSON.parse(event.data);
-
-        switch (parsedData._id) {
-            case 65:
-                if (parsedData?.result === 100) {
-                    console.log('Login successful:');
-                    startCurrencyDataStream(webSocket)
-                    break;
-                }
-                webSocket.close()
-                console.log('Login failed:', parsedData?.err || "Unknown error");
-                break
-            case 1:
-                const currencyData = cacheManager.get("currencyData") || [] as any;
-                const selectedCurrencyData = currencyData.find((data: any) => data?._i === parsedData._i)
-                const newData = {
-                    ...selectedCurrencyData || {},
-                    ...parsedData
-                }
-                cacheManager.set("currencyData", [
-                    ...currencyData.filter((data: any) => data?._i !== parsedData._i),
-                    newData
-                ]);
-
-                const currencyKeysWithSocketId = cacheManager.get("currencyKeysWithSocketId") as CurrencyKeysWithSocketIdTypes[]
-                const selectedCurrencyKey = currencyKeysWithSocketId.find((currency: any) => currency.id === parsedData._i)
-
-                if (selectedCurrencyKey?.socketIds) {
-                    selectedCurrencyKey.socketIds.forEach((socketId: string) => {
-                        io.to(socketId).emit("currencyData", [newData])
-                    })
-                }
-                break
+    try {
+        // Check if required environment variables are set
+        if (!process.env.WEBSOCKET_SERVER_URL) {
+            console.error('WEBSOCKET_SERVER_URL environment variable is not set');
+            return null;
         }
-    };
-    return webSocket;
+
+        let token: string | null = await getServiceToken();
+        if (!token) {
+            console.error('Failed to get service token');
+            return null;
+        }
+
+        const webSocket = new WebSocket(process.env.WEBSOCKET_SERVER_URL);
+
+        webSocket.onopen = () => {
+            console.log('WebSocket connection established');
+            login(webSocket, token as string);
+            hearthbeat(webSocket);
+        };
+
+        webSocket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        webSocket.onclose = (event) => {
+            console.log(`WebSocket connection closed: ${event.code} ${event.reason}`);
+        };
+
+        webSocket.onmessage = (event) => {
+            try {
+                const parsedData = JSON.parse(event.data);
+
+                switch (parsedData._id) {
+                    case 65:
+                        if (parsedData?.result === 100) {
+                            console.log('Login successful:');
+                            startCurrencyDataStream(webSocket)
+                            break;
+                        }
+                        webSocket.close()
+                        console.log('Login failed:', parsedData?.err || "Unknown error");
+                        break
+                    case 1:
+                        const currencyData = cacheManager.get("currencyData") || [] as any;
+                        const selectedCurrencyData = currencyData.find((data: any) => data?._i === parsedData._i)
+                        const newData = {
+                            ...selectedCurrencyData || {},
+                            ...parsedData
+                        }
+                        cacheManager.set("currencyData", [
+                            ...currencyData.filter((data: any) => data?._i !== parsedData._i),
+                            newData
+                        ]);
+
+                        const currencyKeysWithSocketId = cacheManager.get("currencyKeysWithSocketId") as CurrencyKeysWithSocketIdTypes[]
+                        const selectedCurrencyKey = currencyKeysWithSocketId.find((currency: any) => currency.id === parsedData._i)
+
+                        if (selectedCurrencyKey?.socketIds) {
+                            selectedCurrencyKey.socketIds.forEach((socketId: string) => {
+                                io.to(socketId).emit("currencyData", [newData])
+                            })
+                        }
+                        break
+                }
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error);
+            }
+        };
+        return webSocket;
+    } catch (error) {
+        console.error('Error initializing WebSocket:', error);
+        return null;
+    }
 }
