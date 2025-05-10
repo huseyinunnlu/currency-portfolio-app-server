@@ -1,0 +1,33 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [prod-release]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      WEBSOCKET_SERVER_URL: ${{ vars.WEBSOCKET_SERVER_URL }}
+      SERVICE_URL: ${{ vars.SERVICE_URL }}
+      HISTORY_SERVICE_URL: ${{ vars.HISTORY_SERVICE_URL }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          vercel-args: '--prod --build-env WEBSOCKET_SERVER_URL=${{ env.WEBSOCKET_SERVER_URL }} --build-env SERVICE_URL=${{ env.SERVICE_URL }} --build-env HISTORY_SERVICE_URL=${{ env.HISTORY_SERVICE_URL }}'
+

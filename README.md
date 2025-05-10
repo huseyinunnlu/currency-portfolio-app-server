@@ -123,6 +123,50 @@ The application uses Node-Cache to store:
 - Currency data
 - Currency subscription mappings
 
+## Vercel Deployment
+
+This project is configured for deployment on Vercel. Follow these steps to deploy:
+
+1. Install Vercel CLI:
+   ```
+   npm i -g vercel
+   ```
+
+2. Link your project to Vercel:
+   ```
+   vercel login
+   vercel link
+   ```
+
+3. Add the required environment variables in the Vercel dashboard:
+   - `WEBSOCKET_SERVER_URL`
+   - `SERVICE_URL`
+   - `HISTORY_SERVICE_URL`
+
+4. Deploy to Vercel:
+   ```
+   vercel --prod
+   ```
+
+### GitHub Actions Deployment
+
+For automatic deployments via GitHub Actions:
+
+1. Add these to your GitHub repository:
+   - **Secrets**:
+     - `VERCEL_TOKEN`: Your Vercel API token
+     - `VERCEL_ORG_ID`: Your Vercel organization ID
+     - `VERCEL_PROJECT_ID`: Your Vercel project ID
+   
+   - **Variables** (in repository settings → Variables → Actions):
+     - `WEBSOCKET_SERVER_URL`: WebSocket server URL
+     - `SERVICE_URL`: Service URL for API calls
+     - `HISTORY_SERVICE_URL`: History service URL for API calls
+
+2. The GitHub Actions workflow will automatically pass these environment variables to Vercel during deployment.
+
+3. Push to the `prod-release` branch to trigger deployment.
+
 ## License
 
 MIT 
