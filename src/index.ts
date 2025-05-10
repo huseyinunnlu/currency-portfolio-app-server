@@ -12,6 +12,8 @@ import {SYMBOLS} from "./constants";
 
 const PORT = process.env.PORT || 3001
 
+console.log(process.env)
+
 const main = async () => {
     const app: Express = express()
     const server = createServer(app);
