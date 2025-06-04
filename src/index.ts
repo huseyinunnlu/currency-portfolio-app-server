@@ -1,56 +1,76 @@
-import express, {Express} from "express"
-import {createServer} from 'node:http';
-import {Server} from 'socket.io';
+import express, { Express } from 'express';
+import { createServer } from 'node:http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 
-import 'dotenv/config'
-import initWebSocket from "./socket/webSocket";
-import router from "./routes";
-import initSocketIo from "./socket/socketIo";
-import {cacheManager} from "./lib/cacheManager";
-import {SYMBOLS} from "./constants";
+import 'dotenv/config';
+import initWebSocket from '@/socket/webSocket';
+import router from '@/routes';
+import initSocketIo from '@/socket/socketIo';
+import { cacheManager } from '@/lib/cacheManager';
+import { SYMBOLS } from '@/constants';
+import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
 
-const PORT = process.env.PORT || 3001
+import { connect } from 'mongoose';
 
-console.log(process.env)
+const PORT = process.env.PORT || 3001;
 
 const main = async () => {
-    const app: Express = express()
+    const app: Express = express();
     const server = createServer(app);
     const io = new Server(server, {
         cors: {
-            origin: "*",
-        }
+            origin: '*',
+        },
     });
 
-    cacheManager.set("socketClients", [])
+    cacheManager.set('socketClients', []);
 
-    app.use(cors())
-    app.use(router)
+    app.use(cors());
 
-    app.get('/health', (req, res) => {
-        res.send("OK")
-    })
+    // Add request data parsing middleware
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
 
-    //add not found route
-    app.use((req, res) => {
-        res.status(404).send("Not Found")
-    })
+    // Register API routes
+    app.use(router);
 
-    cacheManager.set("currencyKeysWithSocketId", SYMBOLS.map((symbol: string) => ({
-        id: symbol,
-        socketIds: []
-    })))
-    await initSocketIo(io)
-    await initWebSocket(io)
+    app.get('/health', (_req, res) => {
+        res.send('OK');
+    });
 
-    server.listen(3001, () => {
-        console.log('WebSocket server is running')
-    })
-    app.listen(PORT, () => {
-        console.log(`Server is running`)
-    })
-}
+    // Add 404 handler for undefined routes
+    app.use(notFoundHandler);
 
-main()
+    // Add global error handler - this must be the last middleware
+    app.use(errorHandler);
 
+    cacheManager.set(
+        'currencyKeysWithSocketId',
+        SYMBOLS.map((symbol: string) => ({
+            id: symbol,
+            socketIds: [],
+        }))
+    );
+
+    try {
+        // Connect to MongoDB
+        //await connectToDatabase();
+
+        await connect(process.env.MONGODB_URI || '');
+
+        // Initialize WebSocket connections
+        await initSocketIo(io);
+        await initWebSocket(io);
+
+        // Start server
+        server.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+};
+
+main();

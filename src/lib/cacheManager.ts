@@ -1,3 +1,3 @@
-import NodeCache from "node-cache";
+import NodeCache from 'node-cache';
 
-export const cacheManager = new NodeCache({})
+export const cacheManager = new NodeCache({});

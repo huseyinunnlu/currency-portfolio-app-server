@@ -1,0 +1,96 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Currency Portfolio App Server - Development Guidelines
+
+## Project Architecture
+- This is a real-time currency data streaming server built with Node.js, Express, WebSockets, and Socket.IO.
+- The server connects to an external WebSocket service for real-time currency data and streams it to connected clients.
+- The application also provides REST API endpoints for currency definitions and historical data.
+
+## Code Structure
+- Follow the existing project structure with clear separation of concerns.
+- Use TypeScript for all new code with proper type definitions.
+- Keep business logic in appropriate modules rather than in route handlers.
+- Use the cacheManager consistently for data that should be cached.
+
+## Environment Variables
+- Required environment variables:
+  - WEBSOCKET_SERVER_URL: WebSocket server URL for real-time data
+  - SERVICE_URL: Service URL for API calls
+  - HISTORY_SERVICE_URL: History service URL for API calls
+  - PORT: Server port (defaults to 3001 if not set)
+- Always check if environment variables exist before using them.
+
+## WebSocket Implementation
+- Use proper error handling and reconnection logic in WebSocket connections.
+- Ensure proper authentication with external WebSocket services.
+- Implement heartbeat mechanisms to keep connections alive.
+- Handle WebSocket message parsing carefully with try/catch blocks.
+
+## Socket.IO Implementation
+- Manage client connections and disconnections properly.
+- Track client subscriptions to specific currency data.
+- Emit data only to clients that have subscribed to the specific currencies.
+- Use the in-memory cache to track socket clients and their subscriptions.
+
+## API Endpoints
+- Follow RESTful principles for all API endpoints.
+- Implement proper validation for all request parameters.
+- Set appropriate cache headers for static or rarely changing data.
+- Include error handling with appropriate HTTP status codes.
+- Always return API responses using the standardized format:
+  - For successful responses:
+    ```json
+    {
+        "success": true,
+        "message": "Success",
+        "data": {} || []
+    }
+    ```
+  - For error responses:
+    ```json
+    {
+        "success": false,
+        "message": "Error message",
+        "errorCode": 000000
+    }
+    ```
+
+## Performance Considerations
+- Use caching for frequently accessed data to reduce external API calls.
+- Optimize data transfer by only sending necessary fields to clients.
+- Handle large data sets efficiently to prevent memory issues.
+- Implement rate limiting for API endpoints if necessary.
+
+## Security Practices
+- Validate and sanitize all user inputs.
+- Use CORS appropriately to restrict access to trusted origins.
+- Keep sensitive credentials in environment variables, never hardcode them.
+- Implement proper authorization for protected endpoints.
+
+## Deployment Process
+- The application is configured for deployment on Vercel.
+- CI/CD is set up with GitHub Actions on the 'prod-release' branch.
+- Ensure all environment variables are properly set in the Vercel dashboard or via GitHub Actions.
+- Always run tests locally before pushing to production branches.
+
+## Error Handling
+- Implement comprehensive error handling in all API routes and WebSocket connections.
+- Log errors with sufficient context for debugging.
+- Return appropriate error responses to clients.
+- Avoid exposing sensitive information in error messages.
+
+## Logging
+- Use appropriate logging levels (info, error, debug).
+- Include relevant context in log messages.
+- Avoid logging sensitive information.
+- Consider implementing structured logging for easier parsing.
+
+## Code Quality
+- Maintain a consistent coding style.
+- Write clean, reusable, and well-documented code.
+- Follow TypeScript best practices with proper typing.
+- Keep functions small and focused on a single responsibility. 
